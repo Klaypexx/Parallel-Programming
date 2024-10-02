@@ -2,17 +2,26 @@
 #include <iostream>
 #include <vector>
 #include <windows.h>
+#include <chrono>
+
+const int KERNEL_SIZE = 10; // Define kernel size as a constant
 
 struct ThreadData {
     const cv::Mat* input;
     cv::Mat* output;
-    int kernelSize;
+    int kernelSize; 
     int startRow;
     int endRow;
+    int numCores;
 };
 
 DWORD WINAPI ThreadProc(LPVOID lpParam) {
     ThreadData* data = static_cast<ThreadData*>(lpParam);
+
+    // Set the affinity mask for this thread
+    DWORD_PTR mask = (static_cast<DWORD_PTR>(1) << (data->startRow % data->numCores)); // Use modulo to cycle through cores
+    SetThreadAffinityMask(GetCurrentThread(), mask);
+
     int halfKernel = data->kernelSize / 2;
 
     for (int y = data->startRow; y < data->endRow; ++y) {
@@ -45,7 +54,7 @@ DWORD WINAPI ThreadProc(LPVOID lpParam) {
     return 0;
 }
 
-void processImage(const std::string& filename, int kernelSize, int numThreads) {
+void processImage(const std::string& filename, int numThreads, int numCores) {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     // Чтение изображения
@@ -64,9 +73,10 @@ void processImage(const std::string& filename, int kernelSize, int numThreads) {
 
     // Создание потоков
     for (int i = 0; i < numThreads; ++i) {
-        threadDataArray[i] = { &img, &blur, kernelSize,
+        threadDataArray[i] = { &img, &blur, KERNEL_SIZE,
                                 i * rowsPerThread,
-                                (i == numThreads - 1) ? img.rows : (i + 1) * rowsPerThread };
+                                (i == numThreads - 1) ? img.rows : (i + 1) * rowsPerThread,
+                                numCores }; 
 
         handles[i] = CreateThread(NULL, 0, &ThreadProc, &threadDataArray[i], 0, NULL);
         if (handles[i] == NULL) {
@@ -96,16 +106,16 @@ void processImage(const std::string& filename, int kernelSize, int numThreads) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 4) { // Изменено на 3 аргумента
-        std::cerr << "Usage: " << argv[0] << " <image_path> <kernel_size> <num_threads>" << std::endl;
+    if (argc != 4) { 
+        std::cerr << "Usage: " << argv[0] << " <image_path> <num_threads> <num_cores>" << std::endl;
         return -1;
     }
 
     const std::string filename = argv[1];
-    int kernelSize = std::atoi(argv[2]);
-    int numThreads = std::atoi(argv[3]);
+    int numThreads = std::atoi(argv[2]);
+    int numCores = std::atoi(argv[3]); // Get number of cores from command line
 
-    processImage(filename, kernelSize, numThreads);
+    processImage(filename, numThreads, numCores);
 
     return 0;
 }
