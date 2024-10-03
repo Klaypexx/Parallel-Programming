@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <chrono>
 
-const int KERNEL_SIZE = 10; // Define kernel size as a constant
+const int KERNEL_SIZE = 10;
 
 struct ThreadData {
     const cv::Mat* input;
@@ -55,7 +55,6 @@ DWORD WINAPI ThreadProc(LPVOID lpParam) {
 }
 
 void processImage(const std::string& filename, int numThreads, int numCores) {
-    auto startTime = std::chrono::high_resolution_clock::now();
 
     // Чтение изображения
     cv::Mat img = cv::imread(filename);
@@ -98,11 +97,6 @@ void processImage(const std::string& filename, int numThreads, int numCores) {
 
     // Запись результата в файл
     cv::imwrite("output.bmp", blur);
-
-    auto endTime = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> duration = endTime - startTime;
-
-    std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -111,11 +105,18 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    auto startTime = std::chrono::high_resolution_clock::now();
+
     const std::string filename = argv[1];
     int numThreads = std::atoi(argv[2]);
-    int numCores = std::atoi(argv[3]); // Get number of cores from command line
+    int numCores = std::atoi(argv[3]);
 
     processImage(filename, numThreads, numCores);
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = endTime - startTime;
+
+    std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
 
     return 0;
 }
