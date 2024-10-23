@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <chrono>
 
-const int KERNEL_SIZE = 10;
+const int KERNEL_SIZE = 100;
 
 struct ThreadData {
     const cv::Mat* input;
